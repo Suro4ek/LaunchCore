@@ -1,0 +1,3 @@
+package minecraft
+
+type stuc
