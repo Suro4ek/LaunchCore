@@ -5,11 +5,11 @@ import (
 	"LaunchCore/internal/config"
 	"LaunchCore/internal/minecraft"
 	"LaunchCore/internal/minecraft/mc"
+	"LaunchCore/internal/version"
 	"LaunchCore/pkg/logging"
 	"LaunchCore/pkg/mysql"
 	"context"
 	"fmt"
-	"io"
 	"net"
 	"time"
 
@@ -30,6 +30,7 @@ func main() {
 	client := mysql.NewClient(context.Background(), 3, cfg.MySQL)
 	logging.Info("connect to MySQL")
 	mc := startDocker(&logging)
+	migrate(client)
 	ticker := time.NewTicker(30 * time.Second)
 	quit := make(chan struct{})
 	go func() {
@@ -41,7 +42,7 @@ func main() {
 				for _, servermc := range servers {
 					_, err := mcstatusgo.Status("0.0.0.0", servermc.Port, 10*time.Second, 5*time.Second)
 					if err != nil {
-						if check(servermc.ID, repeat) && servermc.Status != "starting" {
+						if check(servermc.ID, repeat) {
 							(*mc).Delete(servermc.ContainerID)
 							client.DB.Delete(servermc)
 							delete(servermc.ID, repeat)
@@ -66,10 +67,15 @@ func main() {
 			}
 		}
 	}()
-	startGRPCServer(&logging, mc)
+	startGRPCServer(&logging, mc, client)
 }
 
-func startGRPCServer(log *logging.Logger, mc *minecraft.MC) {
+func migrate(client *mysql.Client) {
+	client.DB.AutoMigrate(version.Version{})
+	client.DB.AutoMigrate(minecraft.Server{})
+}
+
+func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client) {
 	addr := "0.0.0.0:" + "9000"
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -79,7 +85,7 @@ func startGRPCServer(log *logging.Logger, mc *minecraft.MC) {
 	//create new grpc server and register its dependencies
 	s := grpc.NewServer()
 	router := minecraft.NewRouterServer(minecraft.Deps{
-		Client: nil,
+		Client: client,
 		Mc:     *mc,
 	})
 	log.Info("start grpc server")
@@ -96,13 +102,6 @@ func startDocker(log *logging.Logger) *minecraft.MC {
 		panic(err)
 	}
 
-	reader, err := cli.ImagePull(context.TODO(), "itzg/minecraft-server:latest", types.ImagePullOptions{})
-	if err != nil {
-		panic(err)
-	}
-	log.Info("pull image")
-	io.Copy(log.Writer(), reader)
-	defer reader.Close()
 	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
 		panic(err)
@@ -112,7 +111,7 @@ func startDocker(log *logging.Logger) *minecraft.MC {
 		fmt.Printf("%s %s\n", container.ID[:10], container.Image)
 	}
 
-	docker := mc.NewDocker(cli)
+	docker := mc.NewDocker(cli, log)
 
 	return &docker
 }

@@ -11,7 +11,6 @@ import (
 type Config struct {
 	MySQL     MySQL     `yaml:"mysql"`
 	Minecraft Minecraft `yaml:"minecraft"`
-	OAuth2    OAuth2    `yaml:"oauth2"`
 }
 
 type MySQL struct {
@@ -26,12 +25,6 @@ type Minecraft struct {
 	Ports  string `yaml:"ports"`
 	Memory string `yaml:"memory"`
 	Type   string `yaml:"type" default:"PAPER"`
-}
-
-type OAuth2 struct {
-	ClientSecret string `yaml:"client_secret"`
-	ClientID     string `yaml:"client_id"`
-	RedirectURL  string `yaml:"redirect_url"`
 }
 
 var instance *Config

@@ -1,4 +1,6 @@
-oauth2:
- client_secret: "33239cb7164af564bec9fb715847261a4d602b3b"
- client_id: "cf882e92f0099608c8b5"
- redirect_url: "http://localhost:8080/auth/oauth"
+mysql:
+ host: 0.0.0.0
+ port: 3306
+ user: root
+ pass: example
+ db: example

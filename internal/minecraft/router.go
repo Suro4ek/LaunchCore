@@ -37,8 +37,10 @@ func (s *routerServer) CreateServer(ctx context.Context, req *server.CreateServe
 	if err != nil {
 		return nil, err
 	}
-	id, err := s.mc.Create(req.Name, string(req.Port), version.Name, version.JVVersion.String())
+	//int32 to string
+	id, err := s.mc.Create(req.Name, String(req.Port), version.Name, version.JVVersion.String())
 	if err != nil {
+
 		return nil, err
 	}
 	//string convert to uint16
@@ -51,6 +53,27 @@ func (s *routerServer) CreateServer(ctx context.Context, req *server.CreateServe
 	return &server.Response{
 		Status: "ok",
 	}, nil
+}
+
+func String(n int32) string {
+	buf := [11]byte{}
+	pos := len(buf)
+	i := int64(n)
+	signed := i < 0
+	if signed {
+		i = -i
+	}
+	for {
+		pos--
+		buf[pos], i = '0'+byte(i%10), i/10
+		if i == 0 {
+			if signed {
+				pos--
+				buf[pos] = '-'
+			}
+			return string(buf[pos:])
+		}
+	}
 }
 
 func (s *routerServer) UpdateServer(ctx context.Context, req *server.UpdateServerRequest) (res *server.Response, er error) {
