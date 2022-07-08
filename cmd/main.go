@@ -1,69 +1,96 @@
 package main
 
 import (
-	"LaunchCore/api/auth"
-	"LaunchCore/api/middleware"
+	"LaunchCore/eu.suro/launch/protos/server"
 	"LaunchCore/internal/config"
 	"LaunchCore/internal/minecraft"
 	"LaunchCore/internal/minecraft/mc"
-	"LaunchCore/internal/user"
 	"LaunchCore/pkg/logging"
+	"LaunchCore/pkg/mysql"
 	"context"
 	"fmt"
 	"io"
+	"net"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/gin-gonic/gin"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/github"
+	"github.com/millkhan/mcstatusgo"
+	"google.golang.org/grpc"
 )
+
+var repeat = make([]uint, 0)
+var repeatBool = bool(false)
 
 func main() {
 	logging.Init()
 	logging := logging.GetLogger()
 	logging.Info("start application")
 	cfg := config.GetConfig()
-	//_ = mysql.NewClient(context.Background(), 3, cfg.MySQL)
+	client := mysql.NewClient(context.Background(), 3, cfg.MySQL)
 	logging.Info("connect to MySQL")
 	mc := startDocker(&logging)
-	startWebServer(&logging, mc, &cfg.OAuth2)
+	ticker := time.NewTicker(30 * time.Second)
+	quit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				var servers []minecraft.Server
+				client.DB.Model(&minecraft.Server{}).Find(&servers)
+				for _, servermc := range servers {
+					_, err := mcstatusgo.Status("0.0.0.0", servermc.Port, 10*time.Second, 5*time.Second)
+					if err != nil {
+						if check(servermc.ID, repeat) && servermc.Status != "starting" {
+							(*mc).Delete(servermc.ContainerID)
+							client.DB.Delete(servermc)
+							delete(servermc.ID, repeat)
+							continue
+						}
+						repeat = append(repeat, servermc.ID)
+						continue
+					}
+					if check(servermc.ID, repeat) {
+						delete(servermc.ID, repeat)
+					}
+				}
+				if repeatBool && len(repeat) > 0 {
+					repeat = make([]uint, 0)
+					repeatBool = false
+				} else {
+					repeatBool = true
+				}
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+	startGRPCServer(&logging, mc)
 }
 
-func startWebServer(log *logging.Logger, MC *minecraft.MC, cfg *config.OAuth2) {
-	router := gin.Default()
-	log.Info("Start web server")
-	conf := &oauth2.Config{
-		ClientID:     cfg.ClientID,
-		ClientSecret: cfg.ClientSecret,
-		RedirectURL:  cfg.RedirectURL,
-		Scopes: []string{
-			"user",
-		},
-		Endpoint: github.Endpoint,
+func startGRPCServer(log *logging.Logger, mc *minecraft.MC) {
+	addr := "0.0.0.0:" + "9000"
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
 	}
 
-	auth := auth.NewAuthHandler(conf)
-	auth.Register(router)
-
-	api := router.Group("/api/")
-	oauthm := middleware.NewOAuthMiddleware()
-	api.Use(oauthm.CheckAuth())
-
-	user := user.NewUserHandler()
-	user.Register(api)
-
-	mc := minecraft.NewMCHandler(minecraft.Deps{
-		Log:       log,
-		Client:    nil,
-		Container: MC,
+	//create new grpc server and register its dependencies
+	s := grpc.NewServer()
+	router := minecraft.NewRouterServer(minecraft.Deps{
+		Client: nil,
+		Mc:     *mc,
 	})
-	mc.Register(api)
-
-	router.Run(":8080")
+	log.Info("start grpc server")
+	server.RegisterServerServer(s, router)
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }
 
 func startDocker(log *logging.Logger) *minecraft.MC {
+	log.Info("start docker api")
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		panic(err)
@@ -86,11 +113,26 @@ func startDocker(log *logging.Logger) *minecraft.MC {
 	}
 
 	docker := mc.NewDocker(cli)
+
 	return &docker
-	//create timeout after 10 sec sleep
-	//time.Sleep(10 * time.Second)
-	//er = docker.Delete(id)
-	//if er != nil {
-	//	panic(er)
-	//}
+}
+
+//check value in []uint
+func check(val uint, list []uint) bool {
+	for _, v := range list {
+		if v == val {
+			return true
+		}
+	}
+	return false
+}
+
+//delete value in []uint
+func delete(val uint, list []uint) []uint {
+	for i, v := range list {
+		if v == val {
+			list = append(list[:i], list[i+1:]...)
+		}
+	}
+	return list
 }

@@ -14,4 +14,5 @@ type ServerInfo struct {
 	Version    string `json:"version"`
 	OwnerName  string `json:"owner_name"`
 	Status     string `json:"status"`
+	Port       string `json:"port"`
 }
