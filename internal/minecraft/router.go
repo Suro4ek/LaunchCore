@@ -37,13 +37,11 @@ func (s *routerServer) CreateServer(ctx context.Context, req *server.CreateServe
 	if err != nil {
 		return nil, err
 	}
-	//int32 to string
-	id, err := s.mc.Create(req.Name, String(req.Port), version.Name, version.JVVersion.String())
+	id, err := s.mc.Create(req.Name, String(req.Port), version.Name, version.JVVersion.String(), req.SaveWorld)
 	if err != nil {
 
 		return nil, err
 	}
-	//string convert to uint16
 	s.client.DB.Create(&Server{
 		Port:        uint16(req.Port),
 		OwnerName:   req.Name,
