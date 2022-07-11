@@ -2,16 +2,18 @@ package minecraft
 
 import (
 	"LaunchCore/eu.suro/launch/protos/server"
+	"LaunchCore/internal/ports"
 	"LaunchCore/internal/version"
 	"LaunchCore/pkg/mysql"
 	"context"
+	"errors"
 	"time"
 
 	"github.com/millkhan/mcstatusgo"
 )
 
 type routerServer struct {
-	ports  []int
+	ports  ports.Ports
 	client *mysql.Client
 	server.UnimplementedServerServer
 	mc MC
@@ -20,7 +22,7 @@ type routerServer struct {
 type Deps struct {
 	Client *mysql.Client
 	Mc     MC
-	Ports  []int
+	Ports  ports.Ports
 }
 
 func NewRouterServer(deps Deps) server.ServerServer {
@@ -37,16 +39,21 @@ func (s *routerServer) CreateServer(ctx context.Context, req *server.CreateServe
 	if err != nil {
 		return nil, err
 	}
-	id, err := s.mc.Create(req.Name, String(req.Port), version.Name, version.JVVersion.String(), req.SaveWorld)
+	port := s.ports.GetPort()
+	if port == 0 {
+		return nil, errors.New("no free ports")
+	}
+	//port to string
+	id, err := s.mc.Create(req.Name, string(port), version.Name, version.JVVersion.String(), req.SaveWorld, req.Open)
 	if err != nil {
-
 		return nil, err
 	}
 	s.client.DB.Create(&Server{
-		Port:        uint16(req.Port),
+		Port:        uint16(port),
 		OwnerName:   req.Name,
 		ContainerID: id,
 		Status:      "starting",
+		Open:        req.Open,
 	})
 	return &server.Response{
 		Status: "ok",
@@ -94,6 +101,7 @@ func (s *routerServer) DeleteServer(ctx context.Context, req *server.DeleteServe
 	if err != nil {
 		return nil, err
 	}
+	s.ports.FreePort(int32(server1.Port))
 	err = s.client.DB.Delete(server1).Error
 	if err != nil {
 		return nil, err
@@ -117,6 +125,7 @@ func (s *routerServer) ListServers(ctx context.Context, req *server.Empty) (res 
 					Version:    status.Version.Name,
 					OwnerName:  servermc.OwnerName,
 					Status:     "starting",
+					Open:       servermc.Open,
 				})
 			}
 			continue
@@ -127,6 +136,7 @@ func (s *routerServer) ListServers(ctx context.Context, req *server.Empty) (res 
 			Version:    status.Version.Name,
 			OwnerName:  servermc.OwnerName,
 			Status:     servermc.Status,
+			Open:       servermc.Open,
 		})
 	}
 	return &server.ListServersResponse{

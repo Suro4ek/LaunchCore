@@ -22,9 +22,10 @@ type MySQL struct {
 }
 
 type Minecraft struct {
-	Ports  string `yaml:"ports"`
-	Memory string `yaml:"memory"`
-	Type   string `yaml:"type" default:"PAPER"`
+	StartPort int32  `yaml:"startport"`
+	EndPort   int32  `yaml:"endport"`
+	Memory    string `yaml:"memory"`
+	Type      string `yaml:"type" default:"PAPER"`
 }
 
 var instance *Config

@@ -2,9 +2,13 @@ package main
 
 import (
 	"LaunchCore/eu.suro/launch/protos/server"
+	"LaunchCore/eu.suro/launch/protos/user"
 	"LaunchCore/internal/config"
 	"LaunchCore/internal/minecraft"
 	"LaunchCore/internal/minecraft/mc"
+	"LaunchCore/internal/plugins"
+	"LaunchCore/internal/ports"
+	"LaunchCore/internal/users"
 	"LaunchCore/internal/version"
 	"LaunchCore/pkg/logging"
 	"LaunchCore/pkg/mysql"
@@ -29,9 +33,10 @@ func main() {
 	cfg := config.GetConfig()
 	client := mysql.NewClient(context.Background(), 3, cfg.MySQL)
 	logging.Info("connect to MySQL")
-	mc := startDocker(&logging)
+	mc := startDocker(&logging, client)
 	migrate(client)
 	ticker := time.NewTicker(30 * time.Second)
+	ports := ports.NewPorts(cfg.Minecraft.StartPort, cfg.Minecraft.EndPort)
 	quit := make(chan struct{})
 	go func() {
 		for {
@@ -44,6 +49,7 @@ func main() {
 					if err != nil {
 						if check(servermc.ID, repeat) {
 							(*mc).Delete(servermc.ContainerID)
+							ports.FreePort(int32(servermc.Port))
 							client.DB.Delete(servermc)
 							delete(servermc.ID, repeat)
 							continue
@@ -67,15 +73,18 @@ func main() {
 			}
 		}
 	}()
-	startGRPCServer(&logging, mc, client)
+	startGRPCServer(&logging, mc, client, *ports)
 }
 
 func migrate(client *mysql.Client) {
 	client.DB.AutoMigrate(version.Version{})
 	client.DB.AutoMigrate(minecraft.Server{})
+	client.DB.AutoMigrate(users.User{})
+	client.DB.AutoMigrate(users.Friend{})
+	client.DB.AutoMigrate(plugins.Plugin{})
 }
 
-func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client) {
+func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client, ports ports.Ports) {
 	addr := "0.0.0.0:" + "9000"
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -87,15 +96,18 @@ func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client
 	router := minecraft.NewRouterServer(minecraft.Deps{
 		Client: client,
 		Mc:     *mc,
+		Ports:  ports,
 	})
+	userRouter := users.NewRouterUser(client)
 	log.Info("start grpc server")
 	server.RegisterServerServer(s, router)
+	user.RegisterUserServer(s, userRouter)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
 
-func startDocker(log *logging.Logger) *minecraft.MC {
+func startDocker(log *logging.Logger, mysql *mysql.Client) *minecraft.MC {
 	log.Info("start docker api")
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -111,7 +123,7 @@ func startDocker(log *logging.Logger) *minecraft.MC {
 		fmt.Printf("%s %s\n", container.ID[:10], container.Image)
 	}
 
-	docker := mc.NewDocker(cli, log)
+	docker := mc.NewDocker(cli, log, mysql)
 
 	return &docker
 }
