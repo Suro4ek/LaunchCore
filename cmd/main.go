@@ -74,6 +74,7 @@ func main() {
 		}
 	}()
 	startGRPCServer(&logging, mc, client, *ports)
+	deleteAllServerBeforeStart(client, *mc)
 }
 
 func migrate(client *mysql.Client) {
@@ -104,6 +105,15 @@ func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client
 	user.RegisterUserServer(s, userRouter)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
+	}
+}
+
+func deleteAllServerBeforeStart(client *mysql.Client, mc minecraft.MC) {
+	var servers []minecraft.Server
+	client.DB.Model(&minecraft.Server{}).Find(&servers)
+	for _, servermc := range servers {
+		client.DB.Delete(servermc)
+		mc.Delete(servermc.ContainerID)
 	}
 }
 

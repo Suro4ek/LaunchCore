@@ -4,6 +4,7 @@ import (
 	"LaunchCore/eu.suro/launch/protos/user"
 	"LaunchCore/pkg/mysql"
 	"context"
+	"os"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -73,6 +74,19 @@ func (r *routerUser) RemoveFriend(ctx context.Context, req *user.RemoveFriendReq
 		return nil, status.Errorf(codes.NotFound, "friend not found")
 	}
 	err = r.client.DB.Model(&use).Association("Friends").Delete(friend)
+	if err != nil {
+		return nil, err
+	}
+	return &user.Response{
+		Status: "ok",
+	}, nil
+}
+
+func (r *routerUser) DeleteWorld(ctx context.Context, req *user.RemoveWorldRequest) (res *user.Response, err error) {
+	if req.Name == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "name is empty")
+	}
+	err = os.Remove("/data/minecraft/" + req.Name)
 	if err != nil {
 		return nil, err
 	}
