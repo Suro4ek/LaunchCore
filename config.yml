@@ -4,3 +4,8 @@ mysql:
  user: root
  pass: example
  db: example
+minecraft:
+  startport: 25565
+  endport: 25569
+  memory: 1
+  type: PAPER

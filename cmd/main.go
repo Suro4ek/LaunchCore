@@ -3,6 +3,7 @@ package main
 import (
 	"LaunchCore/eu.suro/launch/protos/server"
 	"LaunchCore/eu.suro/launch/protos/user"
+	"LaunchCore/eu.suro/launch/protos/web"
 	"LaunchCore/internal/config"
 	"LaunchCore/internal/minecraft"
 	"LaunchCore/internal/minecraft/mc"
@@ -10,6 +11,7 @@ import (
 	"LaunchCore/internal/ports"
 	"LaunchCore/internal/users"
 	"LaunchCore/internal/version"
+	"LaunchCore/internal/webr"
 	"LaunchCore/pkg/logging"
 	"LaunchCore/pkg/mysql"
 	"context"
@@ -92,17 +94,15 @@ func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	//create new grpc server and register its dependencies
-	s := grpc.NewServer()
-	router := minecraft.NewRouterServer(minecraft.Deps{
-		Client: client,
-		Mc:     *mc,
-		Ports:  ports,
-	})
+	s := grpc.NewServer(grpc.WithInsecure())
+	service := minecraft.NewMCService(ports, client, *mc)
+	router := minecraft.NewRouterServer(*service)
+	webRouter := webr.NewWebRouter(*service)
 	userRouter := users.NewRouterUser(client)
 	log.Info("start grpc server")
 	server.RegisterServerServer(s, router)
 	user.RegisterUserServer(s, userRouter)
+	web.RegisterWebServer(s, webRouter)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

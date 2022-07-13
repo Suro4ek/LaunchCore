@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package web;
+option go_package = "eu.suro/launch/protos/web";
+
+service Web{
+    rpc DeleteAllServers(Empty) returns (Response) {}
+    rpc CreatePlugin(Plugin) returns (Response) {}
+    rpc DeletePlugin(Plugin) returns (Response) {}
+    rpc GetPlugin(ResponseById) returns (Plugin) {}
+    rpc GetPlugins(Empty) returns (Plugins) {}
+    rpc UpdatePlugin(Plugin) returns (Response) {}
+    rpc CreateVersion(Version) returns (Response) {}
+    rpc DeleteVersion(Version) returns (Response) {}
+    rpc GetVersion(ResponseById) returns (Version) {}
+    rpc GetVersions(Empty) returns (Versions) {}
+    rpc UpdateVersion(Version) returns (Response) {}
+}
+
+message Empty{
+
+}
+
+message ResponseById{
+    string id = 1;
+}
+
+message Version{
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string url = 4;
+    string version = 5;
+    string java_version = 6;
+}
+
+message Versions{
+    repeated Version versions = 1;
+}
+
+message Plugins {
+    repeated Plugin plugins = 1;
+}
+
+message Plugin{
+    int32 id = 1;
+    string name = 2;
+    int32 spigotid = 3;
+    string description = 4;
+}
+
+message Response{
+    string message = 1;
+}
+
