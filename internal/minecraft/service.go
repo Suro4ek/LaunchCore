@@ -28,6 +28,15 @@ func (s *Service) CreateServer(ver string, name string, saveworld bool, open boo
 	if err != nil {
 		return "", err
 	}
+	//check server is exist db
+	var server1 Server
+	err = s.client.DB.Where("name = ?", name).First(&server1).Error
+	if err != nil {
+		return "", err
+	}
+	if server1.ID != 0 {
+		return "", errors.New("server is exist")
+	}
 	port := s.ports.GetPort()
 	if port == 0 {
 		return "", errors.New("no free ports")
