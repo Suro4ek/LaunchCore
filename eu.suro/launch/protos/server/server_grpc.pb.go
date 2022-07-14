@@ -26,6 +26,8 @@ type ServerClient interface {
 	UpdateServer(ctx context.Context, in *UpdateServerRequest, opts ...grpc.CallOption) (*Response, error)
 	DeleteServer(ctx context.Context, in *DeleteServerRequest, opts ...grpc.CallOption) (*Response, error)
 	ListServers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListServersResponse, error)
+	GetPlugins(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Plugins, error)
+	GetVersions(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Versions, error)
 }
 
 type serverClient struct {
@@ -72,6 +74,24 @@ func (c *serverClient) ListServers(ctx context.Context, in *Empty, opts ...grpc.
 	return out, nil
 }
 
+func (c *serverClient) GetPlugins(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Plugins, error) {
+	out := new(Plugins)
+	err := c.cc.Invoke(ctx, "/server.Server/GetPlugins", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *serverClient) GetVersions(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Versions, error) {
+	out := new(Versions)
+	err := c.cc.Invoke(ctx, "/server.Server/GetVersions", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServerServer is the server API for Server service.
 // All implementations must embed UnimplementedServerServer
 // for forward compatibility
@@ -80,6 +100,8 @@ type ServerServer interface {
 	UpdateServer(context.Context, *UpdateServerRequest) (*Response, error)
 	DeleteServer(context.Context, *DeleteServerRequest) (*Response, error)
 	ListServers(context.Context, *Empty) (*ListServersResponse, error)
+	GetPlugins(context.Context, *Empty) (*Plugins, error)
+	GetVersions(context.Context, *Empty) (*Versions, error)
 	mustEmbedUnimplementedServerServer()
 }
 
@@ -98,6 +120,12 @@ func (UnimplementedServerServer) DeleteServer(context.Context, *DeleteServerRequ
 }
 func (UnimplementedServerServer) ListServers(context.Context, *Empty) (*ListServersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListServers not implemented")
+}
+func (UnimplementedServerServer) GetPlugins(context.Context, *Empty) (*Plugins, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPlugins not implemented")
+}
+func (UnimplementedServerServer) GetVersions(context.Context, *Empty) (*Versions, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetVersions not implemented")
 }
 func (UnimplementedServerServer) mustEmbedUnimplementedServerServer() {}
 
@@ -184,6 +212,42 @@ func _Server_ListServers_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Server_GetPlugins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServerServer).GetPlugins(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/server.Server/GetPlugins",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServerServer).GetPlugins(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Server_GetVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServerServer).GetVersions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/server.Server/GetVersions",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServerServer).GetVersions(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Server_ServiceDesc is the grpc.ServiceDesc for Server service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -206,6 +270,14 @@ var Server_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListServers",
 			Handler:    _Server_ListServers_Handler,
+		},
+		{
+			MethodName: "GetPlugins",
+			Handler:    _Server_GetPlugins_Handler,
+		},
+		{
+			MethodName: "GetVersions",
+			Handler:    _Server_GetVersions_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

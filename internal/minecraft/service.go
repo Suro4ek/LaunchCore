@@ -1,6 +1,7 @@
 package minecraft
 
 import (
+	"LaunchCore/internal/plugins"
 	"LaunchCore/internal/ports"
 	"LaunchCore/internal/version"
 	"LaunchCore/pkg/mysql"
@@ -78,4 +79,20 @@ func (s *Service) ListServers() (server []Server, err error) {
 		return nil, err
 	}
 	return server, nil
+}
+
+func (s *Service) ListPlugins() (plugin []plugins.Plugin, err error) {
+	err = s.client.DB.Find(&plugin).Error
+	if err != nil {
+		return nil, err
+	}
+	return plugin, nil
+}
+
+func (s *Service) ListVersions() (version []version.Version, err error) {
+	err = s.client.DB.Find(&version).Error
+	if err != nil {
+		return nil, err
+	}
+	return version, nil
 }

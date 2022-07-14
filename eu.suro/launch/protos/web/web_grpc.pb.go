@@ -23,13 +23,13 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type WebClient interface {
 	DeleteAllServers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Response, error)
-	CreatePlugin(ctx context.Context, in *Plugin, opts ...grpc.CallOption) (*Response, error)
-	DeletePlugin(ctx context.Context, in *Plugin, opts ...grpc.CallOption) (*Response, error)
+	CreatePlugin(ctx context.Context, in *CreatePluginResponse, opts ...grpc.CallOption) (*Response, error)
+	DeletePlugin(ctx context.Context, in *DeletePluginResponse, opts ...grpc.CallOption) (*Response, error)
 	GetPlugin(ctx context.Context, in *ResponseById, opts ...grpc.CallOption) (*Plugin, error)
 	GetPlugins(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Plugins, error)
 	UpdatePlugin(ctx context.Context, in *Plugin, opts ...grpc.CallOption) (*Response, error)
-	CreateVersion(ctx context.Context, in *Version, opts ...grpc.CallOption) (*Response, error)
-	DeleteVersion(ctx context.Context, in *Version, opts ...grpc.CallOption) (*Response, error)
+	CreateVersion(ctx context.Context, in *CreateVersionResponse, opts ...grpc.CallOption) (*Response, error)
+	DeleteVersion(ctx context.Context, in *DeleteVersionResponse, opts ...grpc.CallOption) (*Response, error)
 	GetVersion(ctx context.Context, in *ResponseById, opts ...grpc.CallOption) (*Version, error)
 	GetVersions(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Versions, error)
 	UpdateVersion(ctx context.Context, in *Version, opts ...grpc.CallOption) (*Response, error)
@@ -52,7 +52,7 @@ func (c *webClient) DeleteAllServers(ctx context.Context, in *Empty, opts ...grp
 	return out, nil
 }
 
-func (c *webClient) CreatePlugin(ctx context.Context, in *Plugin, opts ...grpc.CallOption) (*Response, error) {
+func (c *webClient) CreatePlugin(ctx context.Context, in *CreatePluginResponse, opts ...grpc.CallOption) (*Response, error) {
 	out := new(Response)
 	err := c.cc.Invoke(ctx, "/web.Web/CreatePlugin", in, out, opts...)
 	if err != nil {
@@ -61,7 +61,7 @@ func (c *webClient) CreatePlugin(ctx context.Context, in *Plugin, opts ...grpc.C
 	return out, nil
 }
 
-func (c *webClient) DeletePlugin(ctx context.Context, in *Plugin, opts ...grpc.CallOption) (*Response, error) {
+func (c *webClient) DeletePlugin(ctx context.Context, in *DeletePluginResponse, opts ...grpc.CallOption) (*Response, error) {
 	out := new(Response)
 	err := c.cc.Invoke(ctx, "/web.Web/DeletePlugin", in, out, opts...)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *webClient) UpdatePlugin(ctx context.Context, in *Plugin, opts ...grpc.C
 	return out, nil
 }
 
-func (c *webClient) CreateVersion(ctx context.Context, in *Version, opts ...grpc.CallOption) (*Response, error) {
+func (c *webClient) CreateVersion(ctx context.Context, in *CreateVersionResponse, opts ...grpc.CallOption) (*Response, error) {
 	out := new(Response)
 	err := c.cc.Invoke(ctx, "/web.Web/CreateVersion", in, out, opts...)
 	if err != nil {
@@ -106,7 +106,7 @@ func (c *webClient) CreateVersion(ctx context.Context, in *Version, opts ...grpc
 	return out, nil
 }
 
-func (c *webClient) DeleteVersion(ctx context.Context, in *Version, opts ...grpc.CallOption) (*Response, error) {
+func (c *webClient) DeleteVersion(ctx context.Context, in *DeleteVersionResponse, opts ...grpc.CallOption) (*Response, error) {
 	out := new(Response)
 	err := c.cc.Invoke(ctx, "/web.Web/DeleteVersion", in, out, opts...)
 	if err != nil {
@@ -147,13 +147,13 @@ func (c *webClient) UpdateVersion(ctx context.Context, in *Version, opts ...grpc
 // for forward compatibility
 type WebServer interface {
 	DeleteAllServers(context.Context, *Empty) (*Response, error)
-	CreatePlugin(context.Context, *Plugin) (*Response, error)
-	DeletePlugin(context.Context, *Plugin) (*Response, error)
+	CreatePlugin(context.Context, *CreatePluginResponse) (*Response, error)
+	DeletePlugin(context.Context, *DeletePluginResponse) (*Response, error)
 	GetPlugin(context.Context, *ResponseById) (*Plugin, error)
 	GetPlugins(context.Context, *Empty) (*Plugins, error)
 	UpdatePlugin(context.Context, *Plugin) (*Response, error)
-	CreateVersion(context.Context, *Version) (*Response, error)
-	DeleteVersion(context.Context, *Version) (*Response, error)
+	CreateVersion(context.Context, *CreateVersionResponse) (*Response, error)
+	DeleteVersion(context.Context, *DeleteVersionResponse) (*Response, error)
 	GetVersion(context.Context, *ResponseById) (*Version, error)
 	GetVersions(context.Context, *Empty) (*Versions, error)
 	UpdateVersion(context.Context, *Version) (*Response, error)
@@ -167,10 +167,10 @@ type UnimplementedWebServer struct {
 func (UnimplementedWebServer) DeleteAllServers(context.Context, *Empty) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAllServers not implemented")
 }
-func (UnimplementedWebServer) CreatePlugin(context.Context, *Plugin) (*Response, error) {
+func (UnimplementedWebServer) CreatePlugin(context.Context, *CreatePluginResponse) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreatePlugin not implemented")
 }
-func (UnimplementedWebServer) DeletePlugin(context.Context, *Plugin) (*Response, error) {
+func (UnimplementedWebServer) DeletePlugin(context.Context, *DeletePluginResponse) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeletePlugin not implemented")
 }
 func (UnimplementedWebServer) GetPlugin(context.Context, *ResponseById) (*Plugin, error) {
@@ -182,10 +182,10 @@ func (UnimplementedWebServer) GetPlugins(context.Context, *Empty) (*Plugins, err
 func (UnimplementedWebServer) UpdatePlugin(context.Context, *Plugin) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePlugin not implemented")
 }
-func (UnimplementedWebServer) CreateVersion(context.Context, *Version) (*Response, error) {
+func (UnimplementedWebServer) CreateVersion(context.Context, *CreateVersionResponse) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateVersion not implemented")
 }
-func (UnimplementedWebServer) DeleteVersion(context.Context, *Version) (*Response, error) {
+func (UnimplementedWebServer) DeleteVersion(context.Context, *DeleteVersionResponse) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteVersion not implemented")
 }
 func (UnimplementedWebServer) GetVersion(context.Context, *ResponseById) (*Version, error) {
@@ -229,7 +229,7 @@ func _Web_DeleteAllServers_Handler(srv interface{}, ctx context.Context, dec fun
 }
 
 func _Web_CreatePlugin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Plugin)
+	in := new(CreatePluginResponse)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -241,13 +241,13 @@ func _Web_CreatePlugin_Handler(srv interface{}, ctx context.Context, dec func(in
 		FullMethod: "/web.Web/CreatePlugin",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WebServer).CreatePlugin(ctx, req.(*Plugin))
+		return srv.(WebServer).CreatePlugin(ctx, req.(*CreatePluginResponse))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Web_DeletePlugin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Plugin)
+	in := new(DeletePluginResponse)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -259,7 +259,7 @@ func _Web_DeletePlugin_Handler(srv interface{}, ctx context.Context, dec func(in
 		FullMethod: "/web.Web/DeletePlugin",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WebServer).DeletePlugin(ctx, req.(*Plugin))
+		return srv.(WebServer).DeletePlugin(ctx, req.(*DeletePluginResponse))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -319,7 +319,7 @@ func _Web_UpdatePlugin_Handler(srv interface{}, ctx context.Context, dec func(in
 }
 
 func _Web_CreateVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Version)
+	in := new(CreateVersionResponse)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -331,13 +331,13 @@ func _Web_CreateVersion_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: "/web.Web/CreateVersion",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WebServer).CreateVersion(ctx, req.(*Version))
+		return srv.(WebServer).CreateVersion(ctx, req.(*CreateVersionResponse))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Web_DeleteVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Version)
+	in := new(DeleteVersionResponse)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -349,7 +349,7 @@ func _Web_DeleteVersion_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: "/web.Web/DeleteVersion",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WebServer).DeleteVersion(ctx, req.(*Version))
+		return srv.(WebServer).DeleteVersion(ctx, req.(*DeleteVersionResponse))
 	}
 	return interceptor(ctx, in, info, handler)
 }

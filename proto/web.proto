@@ -5,13 +5,13 @@ option go_package = "eu.suro/launch/protos/web";
 
 service Web{
     rpc DeleteAllServers(Empty) returns (Response) {}
-    rpc CreatePlugin(Plugin) returns (Response) {}
-    rpc DeletePlugin(Plugin) returns (Response) {}
+    rpc CreatePlugin(CreatePluginResponse) returns (Response) {}
+    rpc DeletePlugin(DeletePluginResponse) returns (Response) {}
     rpc GetPlugin(ResponseById) returns (Plugin) {}
     rpc GetPlugins(Empty) returns (Plugins) {}
     rpc UpdatePlugin(Plugin) returns (Response) {}
-    rpc CreateVersion(Version) returns (Response) {}
-    rpc DeleteVersion(Version) returns (Response) {}
+    rpc CreateVersion(CreateVersionResponse) returns (Response) {}
+    rpc DeleteVersion(DeleteVersionResponse) returns (Response) {}
     rpc GetVersion(ResponseById) returns (Version) {}
     rpc GetVersions(Empty) returns (Versions) {}
     rpc UpdateVersion(Version) returns (Response) {}
@@ -23,6 +23,18 @@ message Empty{
 
 message ResponseById{
     string id = 1;
+}
+
+message DeleteVersionResponse{
+    string id = 1;
+}
+
+message CreateVersionResponse{
+    string name = 1;
+    string description = 2;
+    string url = 3;
+    string version = 4;
+    string java_version = 5;
 }
 
 message Version{
@@ -42,10 +54,20 @@ message Plugins {
     repeated Plugin plugins = 1;
 }
 
+message CreatePluginResponse{
+    string name = 1;
+    string spigotid = 2;
+    string description = 3;
+}
+
+message DeletePluginResponse{
+    string id = 1;
+}
+
 message Plugin{
-    int32 id = 1;
+    string id = 1;
     string name = 2;
-    int32 spigotid = 3;
+    string spigotid = 3;
     string description = 4;
 }
 

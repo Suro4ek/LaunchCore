@@ -11,6 +11,7 @@ import (
 type Config struct {
 	MySQL     MySQL     `yaml:"mysql"`
 	Minecraft Minecraft `yaml:"minecraft"`
+	GRPCPort  string    `yaml:"grpc_port" env:"GRPC_PORT"`
 }
 
 type MySQL struct {

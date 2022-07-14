@@ -1,11 +1,12 @@
 mysql:
- host: 0.0.0.0
+ host: localhost
  port: 3306
- user: root
- pass: example
- db: example
+ user: server_user
+ pass: "aDA@8NES)AV5./LY"
+ db: launch
 minecraft:
   startport: 25565
   endport: 25569
   memory: 1
   type: PAPER
+grpc_port: 9000

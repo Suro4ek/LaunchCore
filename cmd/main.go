@@ -25,9 +25,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-var repeat = make([]uint, 0)
-var repeatBool = bool(false)
-
 func main() {
 	logging.Init()
 	logging := logging.GetLogger()
@@ -37,8 +34,25 @@ func main() {
 	logging.Info("connect to MySQL")
 	mc := startDocker(&logging, client)
 	migrate(client)
-	ticker := time.NewTicker(30 * time.Second)
 	ports := ports.NewPorts(cfg.Minecraft.StartPort, cfg.Minecraft.EndPort)
+	checkServers(client, mc, *ports)
+	startGRPCServer(&logging, mc, client, *ports, cfg)
+	deleteAllServerBeforeStart(client, *mc)
+}
+
+func migrate(client *mysql.Client) {
+	client.DB.AutoMigrate(version.Version{})
+	client.DB.AutoMigrate(minecraft.Server{})
+	client.DB.AutoMigrate(plugins.Plugin{})
+	client.DB.AutoMigrate(users.User{})
+	// client.DB.AutoMigrate(users.Friend{})
+
+}
+
+func checkServers(client *mysql.Client, mc *minecraft.MC, ports ports.Ports) {
+	var repeat = make([]uint, 0)
+	var repeatBool = bool(false)
+	ticker := time.NewTicker(30 * time.Second)
 	quit := make(chan struct{})
 	go func() {
 		for {
@@ -75,29 +89,19 @@ func main() {
 			}
 		}
 	}()
-	startGRPCServer(&logging, mc, client, *ports)
-	deleteAllServerBeforeStart(client, *mc)
 }
 
-func migrate(client *mysql.Client) {
-	client.DB.AutoMigrate(version.Version{})
-	client.DB.AutoMigrate(minecraft.Server{})
-	client.DB.AutoMigrate(users.User{})
-	client.DB.AutoMigrate(users.Friend{})
-	client.DB.AutoMigrate(plugins.Plugin{})
-}
-
-func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client, ports ports.Ports) {
-	addr := "0.0.0.0:" + "9000"
+func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client, ports ports.Ports, cfg *config.Config) {
+	addr := "0.0.0.0:" + cfg.GRPCPort
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer(grpc.WithInsecure())
+	s := grpc.NewServer()
 	service := minecraft.NewMCService(ports, client, *mc)
 	router := minecraft.NewRouterServer(*service)
-	webRouter := webr.NewWebRouter(*service)
+	webRouter := webr.NewWebRouter(*service, client)
 	userRouter := users.NewRouterUser(client)
 	log.Info("start grpc server")
 	server.RegisterServerServer(s, router)

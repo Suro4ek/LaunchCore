@@ -83,3 +83,45 @@ func (s *routerServer) ListServers(ctx context.Context, req *server.Empty) (res 
 		Servers: srvInfo,
 	}, nil
 }
+
+func (r *routerServer) GetPlugins(context.Context, *server.Empty) (*server.Plugins, error) {
+	plugins1, err := r.service.ListPlugins()
+	var plugins = make([]*server.Plugin, 0)
+	for _, plugin := range plugins1 {
+		plugins = append(plugins, &server.Plugin{
+			Id:          int32(plugin.ID),
+			Name:        plugin.Name,
+			Spigotid:    plugin.SpigotID,
+			Description: plugin.Description,
+		},
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &server.Plugins{
+		Plugins: plugins,
+	}, nil
+}
+
+func (r *routerServer) GetVersions(context.Context, *server.Empty) (*server.Versions, error) {
+	versions1, err := r.service.ListVersions()
+	var versions = make([]*server.Version, 0)
+	for _, version := range versions1 {
+		versions = append(versions, &server.Version{
+			Id:          string(rune(version.ID)),
+			Name:        version.Name,
+			Description: version.Description,
+			Url:         version.Url,
+			Version:     version.Version,
+			JavaVersion: version.JVVersion,
+		},
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &server.Versions{
+		Versions: versions,
+	}, nil
+}

@@ -89,7 +89,7 @@ func (d *docker) Create(name string, port string, version string, java_version s
 		//array user.Friends to string
 		var friends []string
 		for _, friend := range user.Friends {
-			friends = append(friends, friend.Friend.Name)
+			friends = append(friends, friend.Name)
 		}
 		env = append(env, "WHITELIST="+strings.Join(friends, ",")+name)
 	}

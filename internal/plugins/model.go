@@ -3,6 +3,6 @@ package plugins
 type Plugin struct {
 	ID          uint   `json:"id" gorm:"primarykey"`
 	Name        string `json:"name"`
-	SpigotID    uint   `json:"spigot_id"`
+	SpigotID    string `json:"spigot_id"`
 	Description string `json:"description"`
 }
