@@ -1,8 +1,8 @@
 package minecraft
 
 type Server struct {
-	ID          uint   `json:"id" gorm:"primarykey"`
-	Port        uint16 `json:"port"`
+	ID          uint32 `json:"id" gorm:"primarykey"`
+	Port        string `json:"port"`
 	ContainerID string `json:"container_id"`
 	OwnerName   string `json:"owner_name"`
 	Status      string `json:"status"`

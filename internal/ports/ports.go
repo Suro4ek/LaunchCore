@@ -1,52 +1,43 @@
 package ports
 
+import (
+	"LaunchCore/pkg/logging"
+	"LaunchCore/pkg/mysql"
+)
+
 type Ports struct {
-	startPort int32
-	endPort   int32
-	Ports     []int32
-	UsedPorts []int32
+	client *mysql.Client
+	log    *logging.Logger
 }
 
-func NewPorts(startPort int32, EndPort int32) *Ports {
-	ports := &Ports{
-		startPort: startPort,
-		endPort:   EndPort,
-		Ports:     make([]int32, 0),
-		UsedPorts: make([]int32, 0),
+func NewPorts(client *mysql.Client, log *logging.Logger) *Ports {
+	return &Ports{
+		client: client,
+		log:    log,
 	}
-	for i := startPort; i <= EndPort; i++ {
-		ports.Ports = append(ports.Ports, i)
-	}
-	return ports
 }
 
 //get available port
-func (p *Ports) GetPort() int32 {
-	for _, port := range p.Ports {
-		if !p.IsUsed(port) {
-			p.UsedPorts = append(p.UsedPorts, port)
-			return port
-		}
+func (p *Ports) GetPort() uint32 {
+	var port Port
+	err := p.client.DB.Model(&Port{}).Where("used = ?", false).First(&port).Error
+	if err != nil {
+		return 0
 	}
-	return 0
-}
-
-//isUsed port
-func (p *Ports) IsUsed(port int32) bool {
-	for _, usedPort := range p.UsedPorts {
-		if usedPort == port {
-			return true
-		}
-	}
-	return false
+	port.Used = true
+	p.log.Infof("get port %d", port.Port)
+	p.client.DB.Save(&port)
+	return port.Port
 }
 
 //free port
-func (p *Ports) FreePort(port int32) {
-	for i, usedPort := range p.UsedPorts {
-		if usedPort == port {
-			p.UsedPorts = append(p.UsedPorts[:i], p.UsedPorts[i+1:]...)
-			return
-		}
+func (p *Ports) FreePort(port string) {
+	var port1 Port
+	err := p.client.DB.Model(&Port{}).Where("port = ?", port).First(&port1).Error
+	if err != nil {
+		return
 	}
+	port1.Used = false
+	p.log.Infof("free port %d", port1.Port)
+	p.client.DB.Save(&port1)
 }

@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -27,17 +28,17 @@ import (
 
 func main() {
 	logging.Init()
-	logging := logging.GetLogger()
-	logging.Info("start application")
+	log := logging.GetLogger()
+	log.Info("start application")
 	cfg := config.GetConfig()
-	client := mysql.NewClient(context.Background(), 3, cfg.MySQL)
-	logging.Info("connect to MySQL")
-	mc := startDocker(&logging, client)
-	migrate(client)
-	ports := ports.NewPorts(cfg.Minecraft.StartPort, cfg.Minecraft.EndPort)
-	checkServers(client, mc, *ports)
-	startGRPCServer(&logging, mc, client, *ports, cfg)
-	deleteAllServerBeforeStart(client, *mc)
+	newClient := mysql.NewClient(context.Background(), 3, cfg.MySQL)
+	log.Info("connect to MySQL")
+	docker := startDocker(&log, newClient)
+	migrate(newClient)
+	newPorts := ports.NewPorts(newClient, &log)
+	checkServers(&log, newClient, docker, newPorts)
+	deleteAllServerBeforeStart(newClient, *docker)
+	startGRPCServer(&log, docker, newClient, *newPorts, cfg)
 }
 
 func migrate(client *mysql.Client) {
@@ -45,14 +46,15 @@ func migrate(client *mysql.Client) {
 	client.DB.AutoMigrate(minecraft.Server{})
 	client.DB.AutoMigrate(plugins.Plugin{})
 	client.DB.AutoMigrate(users.User{})
+	client.DB.AutoMigrate(ports.Port{})
 	// client.DB.AutoMigrate(users.Friend{})
 
 }
 
-func checkServers(client *mysql.Client, mc *minecraft.MC, ports ports.Ports) {
-	var repeat = make([]uint, 0)
-	var repeatBool = bool(false)
-	ticker := time.NewTicker(30 * time.Second)
+func checkServers(log *logging.Logger, client *mysql.Client, mc *minecraft.MC, ports *ports.Ports) {
+	var repeat = make([]uint32, 0)
+	//var repeatBool = bool(false)
+	ticker := time.NewTicker(2 * time.Minute)
 	quit := make(chan struct{})
 	go func() {
 		for {
@@ -61,27 +63,20 @@ func checkServers(client *mysql.Client, mc *minecraft.MC, ports ports.Ports) {
 				var servers []minecraft.Server
 				client.DB.Model(&minecraft.Server{}).Find(&servers)
 				for _, servermc := range servers {
-					_, err := mcstatusgo.Status("0.0.0.0", servermc.Port, 10*time.Second, 5*time.Second)
+					value, err := strconv.ParseUint(servermc.Port, 10, 32)
+					_, err = mcstatusgo.Status("0.0.0.0", uint16(value), 10*time.Second, 5*time.Second)
 					if err != nil {
 						if check(servermc.ID, repeat) {
+							log.Infof("delete server %s by port uint16 %d int32 %d", servermc.OwnerName, uint16(value), int32(value))
+							ports.FreePort(servermc.Port)
 							(*mc).Delete(servermc.ContainerID)
-							ports.FreePort(int32(servermc.Port))
 							client.DB.Delete(servermc)
 							delete(servermc.ID, repeat)
-							continue
+						} else {
+							repeat = append(repeat, servermc.ID)
 						}
-						repeat = append(repeat, servermc.ID)
-						continue
 					}
-					if check(servermc.ID, repeat) {
-						delete(servermc.ID, repeat)
-					}
-				}
-				if repeatBool && len(repeat) > 0 {
-					repeat = make([]uint, 0)
-					repeatBool = false
-				} else {
-					repeatBool = true
+					continue
 				}
 			case <-quit:
 				ticker.Stop()
@@ -143,7 +138,7 @@ func startDocker(log *logging.Logger, mysql *mysql.Client) *minecraft.MC {
 }
 
 //check value in []uint
-func check(val uint, list []uint) bool {
+func check(val uint32, list []uint32) bool {
 	for _, v := range list {
 		if v == val {
 			return true
@@ -152,8 +147,8 @@ func check(val uint, list []uint) bool {
 	return false
 }
 
-//delete value in []uint
-func delete(val uint, list []uint) []uint {
+//delete value in []uint32
+func delete(val uint32, list []uint32) []uint32 {
 	for i, v := range list {
 		if v == val {
 			list = append(list[:i], list[i+1:]...)

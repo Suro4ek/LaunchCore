@@ -22,7 +22,7 @@ func NewMCService(ports ports.Ports, client *mysql.Client, mc MC) *Service {
 	}
 }
 
-func (s *Service) CreateServer(ver string, name string, saveworld bool, open bool) (status string, err error) {
+func (s *Service) CreateServer(ver int32, name string, saveworld bool, open bool) (status string, err error) {
 	var version version.Version
 	err = s.client.DB.Where("id = ?", ver).First(&version).Error
 	if err != nil {
@@ -31,23 +31,20 @@ func (s *Service) CreateServer(ver string, name string, saveworld bool, open boo
 	//check server is exist db
 	var server1 Server
 	err = s.client.DB.Where("name = ?", name).First(&server1).Error
-	if err != nil {
-		return "", err
-	}
-	if server1.ID != 0 {
-		return "", errors.New("server is exist")
+	if err == nil {
+		return "", errors.New("server is exists")
 	}
 	port := s.ports.GetPort()
 	if port == 0 {
 		return "", errors.New("no free ports")
 	}
 	//port to string
-	id, err := s.mc.Create(name, string(port), version.Name, version.JVVersion, saveworld, open)
+	id, err := s.mc.Create(name, int32(port), version.Name, version.JVVersion, saveworld, open)
 	if err != nil {
 		return "", err
 	}
 	s.client.DB.Create(&Server{
-		Port:        uint16(port),
+		Port:        String(int32(port)),
 		OwnerName:   name,
 		ContainerID: id,
 		Status:      "starting",
@@ -74,7 +71,8 @@ func (s *Service) DeleteServer(port int32) (status string, err error) {
 	if err != nil {
 		return "", err
 	}
-	s.ports.FreePort(int32(server1.Port))
+	//value, err := strconv.ParseInt(server1.Port, 10, 32)
+	s.ports.FreePort(server1.Port)
 	err = s.client.DB.Delete(server1).Error
 	if err != nil {
 		return "", err
@@ -104,4 +102,25 @@ func (s *Service) ListVersions() (version []version.Version, err error) {
 		return nil, err
 	}
 	return version, nil
+}
+
+func String(n int32) string {
+	buf := [11]byte{}
+	pos := len(buf)
+	i := int64(n)
+	signed := i < 0
+	if signed {
+		i = -i
+	}
+	for {
+		pos--
+		buf[pos], i = '0'+byte(i%10), i/10
+		if i == 0 {
+			if signed {
+				pos--
+				buf[pos] = '-'
+			}
+			return string(buf[pos:])
+		}
+	}
 }

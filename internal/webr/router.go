@@ -31,7 +31,11 @@ func (r *routerWeb) DeleteAllServers(context.Context, *web.Empty) (*web.Response
 		return nil, err
 	}
 	for _, server := range servers {
-		r.service.DeleteServer(int32(server.Port))
+		value, err := strconv.ParseInt(server.Port, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		r.service.DeleteServer(int32(value))
 	}
 	return &web.Response{
 		Message: "ok",
@@ -71,9 +75,8 @@ func (r *routerWeb) GetPlugin(ctx context.Context, req *web.ResponseById) (res *
 	if err != nil {
 		return nil, err
 	}
-	var id string = strconv.FormatUint(uint64(plugin.ID), 10)
 	res = &web.Plugin{
-		Id:          id,
+		Id:          plugin.ID,
 		Name:        plugin.Name,
 		Spigotid:    plugin.SpigotID,
 		Description: plugin.Description,
@@ -89,9 +92,8 @@ func (r *routerWeb) GetPlugins(ctx context.Context, req *web.Empty) (res *web.Pl
 	var pluginsWeb []*web.Plugin
 
 	for _, plugin := range plugins1 {
-		var id string = strconv.FormatUint(uint64(plugin.ID), 10)
 		pluginsWeb = append(pluginsWeb, &web.Plugin{
-			Id:          id,
+			Id:          plugin.ID,
 			Name:        plugin.Name,
 			Description: plugin.Description,
 			Spigotid:    plugin.SpigotID,
@@ -118,9 +120,8 @@ func (r *routerWeb) UpdatePlugin(ctx context.Context, req *web.Plugin) (res *web
 	if req.GetSpigotid() == "" {
 		req.Spigotid = plugin.SpigotID
 	}
-	id, err := strconv.ParseUint(req.Id, 10, 64)
 	err = r.client.DB.Save(&plugins.Plugin{
-		ID:          uint(id),
+		ID:          req.Id,
 		Name:        req.Name,
 		SpigotID:    req.Spigotid,
 		Description: req.Description,
@@ -165,9 +166,8 @@ func (r *routerWeb) GetVersion(ctx context.Context, req *web.ResponseById) (res 
 	if err != nil {
 		return nil, err
 	}
-	var id string = strconv.FormatUint(uint64(version1.ID), 10)
 	res = &web.Version{
-		Id:          id,
+		Id:          version1.ID,
 		Name:        version1.Name,
 		Description: version1.Description,
 		Url:         version1.Url,
@@ -185,9 +185,8 @@ func (r *routerWeb) GetVersions(ctx context.Context, req *web.Empty) (res *web.V
 	}
 	var versionsWeb []*web.Version
 	for _, version := range versions {
-		var id string = strconv.FormatUint(uint64(version.ID), 10)
 		versionsWeb = append(versionsWeb, &web.Version{
-			Id:          id,
+			Id:          version.ID,
 			Name:        version.Name,
 			Description: version.Description,
 			Url:         version.Url,
@@ -219,9 +218,8 @@ func (r *routerWeb) UpdateVersion(ctx context.Context, req *web.Version) (res *w
 	if req.GetJavaVersion() == "" {
 		req.JavaVersion = ver.JVVersion
 	}
-	id, err := strconv.ParseUint(req.Id, 10, 64)
 	err = r.client.DB.Save(&version.Version{
-		ID:          uint(id),
+		ID:          req.Id,
 		Name:        req.Name,
 		Description: req.Description,
 		Url:         req.Url,

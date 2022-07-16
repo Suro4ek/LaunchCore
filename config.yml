@@ -5,8 +5,6 @@ mysql:
  pass: "aDA@8NES)AV5./LY"
  db: launch
 minecraft:
-  startport: 25565
-  endport: 25569
   memory: 1
   type: PAPER
 grpc_port: 9000

@@ -24,8 +24,8 @@ const _ = grpc.SupportPackageIsVersion7
 type UserClient interface {
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*Response, error)
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
-	AddFriend(ctx context.Context, in *AddFriendRequest, opts ...grpc.CallOption) (*Response, error)
-	RemoveFriend(ctx context.Context, in *RemoveFriendRequest, opts ...grpc.CallOption) (*Response, error)
+	//  rpc AddFriend(AddFriendRequest) returns (Response) {}
+	//  rpc RemoveFriend(RemoveFriendRequest) returns (Response) {}
 	DeleteWorld(ctx context.Context, in *RemoveWorldRequest, opts ...grpc.CallOption) (*Response, error)
 }
 
@@ -55,24 +55,6 @@ func (c *userClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...gr
 	return out, nil
 }
 
-func (c *userClient) AddFriend(ctx context.Context, in *AddFriendRequest, opts ...grpc.CallOption) (*Response, error) {
-	out := new(Response)
-	err := c.cc.Invoke(ctx, "/user.User/AddFriend", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *userClient) RemoveFriend(ctx context.Context, in *RemoveFriendRequest, opts ...grpc.CallOption) (*Response, error) {
-	out := new(Response)
-	err := c.cc.Invoke(ctx, "/user.User/RemoveFriend", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *userClient) DeleteWorld(ctx context.Context, in *RemoveWorldRequest, opts ...grpc.CallOption) (*Response, error) {
 	out := new(Response)
 	err := c.cc.Invoke(ctx, "/user.User/DeleteWorld", in, out, opts...)
@@ -88,8 +70,8 @@ func (c *userClient) DeleteWorld(ctx context.Context, in *RemoveWorldRequest, op
 type UserServer interface {
 	CreateUser(context.Context, *CreateUserRequest) (*Response, error)
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
-	AddFriend(context.Context, *AddFriendRequest) (*Response, error)
-	RemoveFriend(context.Context, *RemoveFriendRequest) (*Response, error)
+	//  rpc AddFriend(AddFriendRequest) returns (Response) {}
+	//  rpc RemoveFriend(RemoveFriendRequest) returns (Response) {}
 	DeleteWorld(context.Context, *RemoveWorldRequest) (*Response, error)
 	mustEmbedUnimplementedUserServer()
 }
@@ -103,12 +85,6 @@ func (UnimplementedUserServer) CreateUser(context.Context, *CreateUserRequest) (
 }
 func (UnimplementedUserServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
-}
-func (UnimplementedUserServer) AddFriend(context.Context, *AddFriendRequest) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddFriend not implemented")
-}
-func (UnimplementedUserServer) RemoveFriend(context.Context, *RemoveFriendRequest) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RemoveFriend not implemented")
 }
 func (UnimplementedUserServer) DeleteWorld(context.Context, *RemoveWorldRequest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteWorld not implemented")
@@ -162,42 +138,6 @@ func _User_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-func _User_AddFriend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddFriendRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserServer).AddFriend(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/user.User/AddFriend",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServer).AddFriend(ctx, req.(*AddFriendRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _User_RemoveFriend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RemoveFriendRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserServer).RemoveFriend(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/user.User/RemoveFriend",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServer).RemoveFriend(ctx, req.(*RemoveFriendRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _User_DeleteWorld_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RemoveWorldRequest)
 	if err := dec(in); err != nil {
@@ -230,14 +170,6 @@ var User_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUser",
 			Handler:    _User_GetUser_Handler,
-		},
-		{
-			MethodName: "AddFriend",
-			Handler:    _User_AddFriend_Handler,
-		},
-		{
-			MethodName: "RemoveFriend",
-			Handler:    _User_RemoveFriend_Handler,
 		},
 		{
 			MethodName: "DeleteWorld",

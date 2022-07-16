@@ -1,7 +1,7 @@
 package version
 
 type Version struct {
-	ID          uint   `json:"id" gorm:"primarykey"`
+	ID          uint32 `json:"id" gorm:"primarykey"`
 	JVVersion   string `json:"java_version"`
 	Name        string `json:"name"`
 	Description string `json:"description"`

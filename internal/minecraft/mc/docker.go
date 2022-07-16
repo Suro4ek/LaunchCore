@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -31,7 +32,7 @@ func NewDocker(client *client.Client, log *logging.Logger, db *mysql.Client) min
 	}
 }
 
-func (d *docker) Create(name string, port string, version string, java_version string, save_world bool, open bool) (id string, err error) {
+func (d *docker) Create(name string, port int32, version string, java_version string, save_world bool, open bool) (id string, err error) {
 	fmt.Println(name, port, version, java_version)
 	reader, err := d.client.ImagePull(context.TODO(), "itzg/minecraft-server:"+java_version, types.ImagePullOptions{})
 	if err != nil {
@@ -42,11 +43,17 @@ func (d *docker) Create(name string, port string, version string, java_version s
 		return "", err
 	}
 	defer reader.Close()
+	d.log.Info("pull image success")
 	var mounts = make([]mount.Mount, 0)
 	mounts = append(mounts, mount.Mount{
 		Type:   mount.TypeBind,
-		Source: "/plugins/",
-		Target: "/data/plugins",
+		Source: "/root/server/",
+		Target: "/config/",
+	})
+	mounts = append(mounts, mount.Mount{
+		Type:   mount.TypeBind,
+		Source: "/root/plugins/",
+		Target: "/plugins",
 	})
 	if save_world {
 		mounts = append(mounts, mount.Mount{
@@ -69,6 +76,7 @@ func (d *docker) Create(name string, port string, version string, java_version s
 			Source: "/data/minecraft/" + name + "/ops.json",
 			Target: "/data/ops.json",
 		})
+		d.log.Info("save world")
 	}
 	var user users.User
 	err = d.DB.DB.Model(&users.User{}).Where("name = ?", name).Association("Friends").Find(&user)
@@ -78,21 +86,24 @@ func (d *docker) Create(name string, port string, version string, java_version s
 		"EULA=TRUE",
 		"USE_AIKAR_FLAGS=true",
 		"ENABLE_AUTOSTOP=TRUE",
+		"COPY_CONFIG_DEST=/data",
+		"TYPE=PAPER",
 		"SYNC_SKIP_NEWER_IN_DESTINATION=false",
 		"AUTOSTOP_TIMEOUT_EST=10",
 		"OPS=" + name,
 		"VERSION=" + version,
+		"ONLINE_MODE=FALSE",
 		"SPAWN_PROTECTION=0",
 	}
-	if !open {
-		env = append(env, "ENFORCE_WHITELIST=TRUE")
-		//array user.Friends to string
-		var friends []string
-		for _, friend := range user.Friends {
-			friends = append(friends, friend.Name)
-		}
-		env = append(env, "WHITELIST="+strings.Join(friends, ",")+name)
-	}
+	//if !open {
+	//	env = append(env, "ENFORCE_WHITELIST=TRUE")
+	//array user.Friends to string
+	//var friends []string
+	//for _, friend := range user.Friends {
+	//	friends = append(friends, friend.Name)
+	//}
+	//env = append(env, "WHITELIST="+strings.Join(friends, ",")+name)
+	//}
 	if len(user.Plugins) > 0 {
 		//int32 to string
 		var plugins_str []string
@@ -100,6 +111,7 @@ func (d *docker) Create(name string, port string, version string, java_version s
 			plugins_str = append(plugins_str, fmt.Sprintf("%d", plugin))
 		}
 		env = append(env, "SPIGET_RESOURCES="+strings.Join(plugins_str, ","))
+		d.log.Info("plugins")
 	}
 	resp, err := d.client.ContainerCreate(context.Background(), &container.Config{
 		Env:   env,
@@ -110,7 +122,7 @@ func (d *docker) Create(name string, port string, version string, java_version s
 			nat.Port("25565/tcp"): []nat.PortBinding{
 				{
 					HostIP:   "0.0.0.0",
-					HostPort: port + "/tcp",
+					HostPort: strconv.Itoa(int(port)) + "/tcp",
 				},
 			},
 		},
@@ -119,7 +131,7 @@ func (d *docker) Create(name string, port string, version string, java_version s
 	if err != nil {
 		return "", err
 	}
-
+	d.log.Info("Created container: " + resp.ID)
 	err = d.client.ContainerStart(context.TODO(), resp.ID, types.ContainerStartOptions{})
 	if err != nil {
 		return "", err
@@ -133,6 +145,7 @@ func (d *docker) Get(id string) error {
 }
 
 func (d *docker) Delete(id string) error {
+	d.log.Info("Deleting container: " + id)
 	err := d.client.ContainerRemove(context.TODO(), id, types.ContainerRemoveOptions{
 		Force: true,
 	})

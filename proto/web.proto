@@ -38,7 +38,7 @@ message CreateVersionResponse{
 }
 
 message Version{
-    string id = 1;
+    uint32 id = 1;
     string name = 2;
     string description = 3;
     string url = 4;
@@ -65,7 +65,7 @@ message DeletePluginResponse{
 }
 
 message Plugin{
-    string id = 1;
+    uint32 id = 1;
     string name = 2;
     string spigotid = 3;
     string description = 4;

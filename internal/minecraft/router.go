@@ -3,6 +3,8 @@ package minecraft
 import (
 	"LaunchCore/eu.suro/launch/protos/server"
 	"context"
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/millkhan/mcstatusgo"
@@ -56,7 +58,8 @@ func (s *routerServer) ListServers(ctx context.Context, req *server.Empty) (res 
 	}
 	var srvInfo = make([]*server.ServerInfo, 0)
 	for _, servermc := range servers {
-		status, err := mcstatusgo.Status("0.0.0.0", servermc.Port, 10*time.Second, 5*time.Second)
+		value, err := strconv.ParseUint(servermc.Port, 10, 16)
+		status, err := mcstatusgo.Status("0.0.0.0", uint16(value), 10*time.Second, 5*time.Second)
 		if err != nil {
 			if servermc.Status == "starting" {
 				srvInfo = append(srvInfo, &server.ServerInfo{
@@ -66,6 +69,7 @@ func (s *routerServer) ListServers(ctx context.Context, req *server.Empty) (res 
 					OwnerName:  servermc.OwnerName,
 					Status:     "starting",
 					Open:       servermc.Open,
+					Port:       servermc.Port,
 				})
 			}
 			continue
@@ -77,6 +81,7 @@ func (s *routerServer) ListServers(ctx context.Context, req *server.Empty) (res 
 			OwnerName:  servermc.OwnerName,
 			Status:     servermc.Status,
 			Open:       servermc.Open,
+			Port:       servermc.Port,
 		})
 	}
 	return &server.ListServersResponse{
@@ -89,7 +94,7 @@ func (r *routerServer) GetPlugins(context.Context, *server.Empty) (*server.Plugi
 	var plugins = make([]*server.Plugin, 0)
 	for _, plugin := range plugins1 {
 		plugins = append(plugins, &server.Plugin{
-			Id:          int32(plugin.ID),
+			Id:          plugin.ID,
 			Name:        plugin.Name,
 			Spigotid:    plugin.SpigotID,
 			Description: plugin.Description,
@@ -108,8 +113,9 @@ func (r *routerServer) GetVersions(context.Context, *server.Empty) (*server.Vers
 	versions1, err := r.service.ListVersions()
 	var versions = make([]*server.Version, 0)
 	for _, version := range versions1 {
+		fmt.Println(version.ID, version.Name)
 		versions = append(versions, &server.Version{
-			Id:          string(rune(version.ID)),
+			Id:          version.ID,
 			Name:        version.Name,
 			Description: version.Description,
 			Url:         version.Url,
@@ -121,6 +127,7 @@ func (r *routerServer) GetVersions(context.Context, *server.Empty) (*server.Vers
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(versions[0].Id, versions[0].Name)
 	return &server.Versions{
 		Versions: versions,
 	}, nil
