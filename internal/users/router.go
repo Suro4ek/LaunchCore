@@ -34,8 +34,9 @@ func (r *routerUser) CreateUser(ctx context.Context, req *user.CreateUserRequest
 	// 	plugins1 = append(plugins1, p)
 	// }
 	err = r.client.DB.Create(&User{
-		Name:    req.Name,
-		Plugins: plugins1,
+		Name:     req.Name,
+		Plugins:  plugins1,
+		RealName: req.RealName,
 	}).Error
 	if err != nil {
 		return nil, err

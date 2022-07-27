@@ -44,6 +44,11 @@ func (d *docker) Create(name string, port int32, version string, java_version st
 	}
 	defer reader.Close()
 	d.log.Info("pull image success")
+	var user users.User
+	err = d.DB.DB.Model(&users.User{}).Where("name = ?", name).Find(&user).Error
+	if err != nil {
+		return "", err
+	}
 	var mounts = make([]mount.Mount, 0)
 	mounts = append(mounts, mount.Mount{
 		Type:   mount.TypeBind,
@@ -58,42 +63,43 @@ func (d *docker) Create(name string, port int32, version string, java_version st
 	if save_world {
 		mounts = append(mounts, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: "/data/minecraft/" + name + "/world",
+			Source: "/data/minecraft/" + user.Name + "/world",
 			Target: "/data/world",
 		})
 		mounts = append(mounts, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: "/data/minecraft/" + name + "/world_nether",
+			Source: "/data/minecraft/" + user.Name + "/world_nether",
 			Target: "/data/world_nether",
 		})
 		mounts = append(mounts, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: "/data/minecraft/" + name + "/world_the_end",
+			Source: "/data/minecraft/" + user.Name + "/world_the_end",
 			Target: "/data/world_the_end",
 		})
 		mounts = append(mounts, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: "/data/minecraft/" + name + "/ops.json",
+			Source: "/data/minecraft/" + user.Name + "/ops.json",
 			Target: "/data/ops.json",
 		})
 		d.log.Info("save world")
 	}
-	var user users.User
-	err = d.DB.DB.Model(&users.User{}).Where("name = ?", name).Association("Friends").Find(&user)
 	env := []string{
 		"SERVER_JAVA_OPTS=-Xmx2024M -Xms2024M -XX:+UseG1GC -XX:+UseStringDeduplication",
 		"SERVER_MAX_PLAYERS=20",
 		"EULA=TRUE",
 		"USE_AIKAR_FLAGS=true",
-		"ENABLE_AUTOSTOP=TRUE",
 		"COPY_CONFIG_DEST=/data",
 		"TYPE=PAPER",
 		"SYNC_SKIP_NEWER_IN_DESTINATION=false",
-		"AUTOSTOP_TIMEOUT_EST=10",
-		"OPS=" + name,
+		"SERVER_NAME=" + name,
 		"VERSION=" + version,
 		"ONLINE_MODE=FALSE",
 		"SPAWN_PROTECTION=0",
+		//AutoStop
+		"ENABLE_AUTOSTOP=TRUE",
+		"AUTOSTOP_TIMEOUT_INIT=100",
+		"AUTOSTOP_TIMEOUT_EST=100",
+		"OPS=" + user.RealName,
 	}
 	//if !open {
 	//	env = append(env, "ENFORCE_WHITELIST=TRUE")

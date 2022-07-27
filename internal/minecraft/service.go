@@ -9,12 +9,12 @@ import (
 )
 
 type Service struct {
-	ports  ports.Ports
+	ports  *ports.Ports
 	client *mysql.Client
 	mc     MC
 }
 
-func NewMCService(ports ports.Ports, client *mysql.Client, mc MC) *Service {
+func NewMCService(ports *ports.Ports, client *mysql.Client, mc MC) *Service {
 	return &Service{
 		ports:  ports,
 		client: client,
@@ -27,12 +27,6 @@ func (s *Service) CreateServer(ver int32, name string, saveworld bool, open bool
 	err = s.client.DB.Where("id = ?", ver).First(&version).Error
 	if err != nil {
 		return "", err
-	}
-	//check server is exist db
-	var server1 Server
-	err = s.client.DB.Where("name = ?", name).First(&server1).Error
-	if err == nil {
-		return "", errors.New("server is exists")
 	}
 	port := s.ports.GetPort()
 	if port == 0 {

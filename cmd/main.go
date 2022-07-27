@@ -37,8 +37,8 @@ func main() {
 	migrate(newClient)
 	newPorts := ports.NewPorts(newClient, &log)
 	checkServers(&log, newClient, docker, newPorts)
-	deleteAllServerBeforeStart(newClient, *docker)
-	startGRPCServer(&log, docker, newClient, *newPorts, cfg)
+	deleteAllServerBeforeStart(newClient, *docker, newPorts)
+	startGRPCServer(&log, docker, newClient, newPorts, cfg)
 }
 
 func migrate(client *mysql.Client) {
@@ -54,7 +54,7 @@ func migrate(client *mysql.Client) {
 func checkServers(log *logging.Logger, client *mysql.Client, mc *minecraft.MC, ports *ports.Ports) {
 	var repeat = make([]uint32, 0)
 	//var repeatBool = bool(false)
-	ticker := time.NewTicker(2 * time.Minute)
+	ticker := time.NewTicker(1 * time.Minute)
 	quit := make(chan struct{})
 	go func() {
 		for {
@@ -69,9 +69,12 @@ func checkServers(log *logging.Logger, client *mysql.Client, mc *minecraft.MC, p
 						if check(servermc.ID, repeat) {
 							log.Infof("delete server %s by port uint16 %d int32 %d", servermc.OwnerName, uint16(value), int32(value))
 							ports.FreePort(servermc.Port)
-							(*mc).Delete(servermc.ContainerID)
+							err = (*mc).Delete(servermc.ContainerID)
 							client.DB.Delete(servermc)
 							delete(servermc.ID, repeat)
+							if err != nil {
+								log.Errorf("delete server %s error %s", servermc.OwnerName, err)
+							}
 						} else {
 							repeat = append(repeat, servermc.ID)
 						}
@@ -86,7 +89,7 @@ func checkServers(log *logging.Logger, client *mysql.Client, mc *minecraft.MC, p
 	}()
 }
 
-func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client, ports ports.Ports, cfg *config.Config) {
+func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client, ports *ports.Ports, cfg *config.Config) {
 	addr := "0.0.0.0:" + cfg.GRPCPort
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -107,11 +110,12 @@ func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client
 	}
 }
 
-func deleteAllServerBeforeStart(client *mysql.Client, mc minecraft.MC) {
+func deleteAllServerBeforeStart(client *mysql.Client, mc minecraft.MC, ports *ports.Ports) {
 	var servers []minecraft.Server
 	client.DB.Model(&minecraft.Server{}).Find(&servers)
 	for _, servermc := range servers {
 		client.DB.Delete(servermc)
+		ports.FreePort(servermc.Port)
 		mc.Delete(servermc.ContainerID)
 	}
 }
