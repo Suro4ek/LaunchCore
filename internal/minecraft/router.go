@@ -132,3 +132,18 @@ func (r *routerServer) GetVersions(context.Context, *server.Empty) (*server.Vers
 		Versions: versions,
 	}, nil
 }
+
+func (r *routerServer) DeleteAllServers(context.Context, *server.Empty) (*server.Empty, error) {
+	servers, err := r.service.ListServers()
+	if err != nil {
+		return nil, err
+	}
+	for _, server := range servers {
+		value, err := strconv.ParseInt(server.Port, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		r.service.DeleteServer(int32(value))
+	}
+	return &server.Empty{}, nil
+}

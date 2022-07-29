@@ -3,7 +3,6 @@ package main
 import (
 	"LaunchCore/eu.suro/launch/protos/server"
 	"LaunchCore/eu.suro/launch/protos/user"
-	"LaunchCore/eu.suro/launch/protos/web"
 	"LaunchCore/internal/config"
 	"LaunchCore/internal/minecraft"
 	"LaunchCore/internal/minecraft/mc"
@@ -11,7 +10,6 @@ import (
 	"LaunchCore/internal/ports"
 	"LaunchCore/internal/users"
 	"LaunchCore/internal/version"
-	"LaunchCore/internal/webr"
 	"LaunchCore/pkg/logging"
 	"LaunchCore/pkg/mysql"
 	"context"
@@ -36,9 +34,10 @@ func main() {
 	docker := startDocker(&log, newClient)
 	migrate(newClient)
 	newPorts := ports.NewPorts(newClient, &log)
-	checkServers(&log, newClient, docker, newPorts)
+	service := minecraft.NewMCService(newPorts, newClient, *docker)
+	checkServers(&log, newClient, docker, newPorts, service)
 	deleteAllServerBeforeStart(newClient, *docker, newPorts)
-	startGRPCServer(&log, docker, newClient, newPorts, cfg)
+	startGRPCServer(&log, docker, newClient, newPorts, cfg, service)
 }
 
 func migrate(client *mysql.Client) {
@@ -51,7 +50,7 @@ func migrate(client *mysql.Client) {
 
 }
 
-func checkServers(log *logging.Logger, client *mysql.Client, mc *minecraft.MC, ports *ports.Ports) {
+func checkServers(log *logging.Logger, client *mysql.Client, mc *minecraft.MC, ports *ports.Ports, service *minecraft.Service) {
 	var repeat = make([]uint32, 0)
 	//var repeatBool = bool(false)
 	ticker := time.NewTicker(1 * time.Minute)
@@ -68,13 +67,8 @@ func checkServers(log *logging.Logger, client *mysql.Client, mc *minecraft.MC, p
 					if err != nil {
 						if check(servermc.ID, repeat) {
 							log.Infof("delete server %s by port uint16 %d int32 %d", servermc.OwnerName, uint16(value), int32(value))
-							ports.FreePort(servermc.Port)
-							err = (*mc).Delete(servermc.ContainerID)
-							client.DB.Delete(servermc)
+							service.DeleteServer(int32(value))
 							delete(servermc.ID, repeat)
-							if err != nil {
-								log.Errorf("delete server %s error %s", servermc.OwnerName, err)
-							}
 						} else {
 							repeat = append(repeat, servermc.ID)
 						}
@@ -89,7 +83,7 @@ func checkServers(log *logging.Logger, client *mysql.Client, mc *minecraft.MC, p
 	}()
 }
 
-func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client, ports *ports.Ports, cfg *config.Config) {
+func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client, ports *ports.Ports, cfg *config.Config, service *minecraft.Service) {
 	addr := "0.0.0.0:" + cfg.GRPCPort
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -97,14 +91,12 @@ func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client
 	}
 
 	s := grpc.NewServer()
-	service := minecraft.NewMCService(ports, client, *mc)
+
 	router := minecraft.NewRouterServer(*service)
-	webRouter := webr.NewWebRouter(*service, client)
 	userRouter := users.NewRouterUser(client)
 	log.Info("start grpc server")
 	server.RegisterServerServer(s, router)
 	user.RegisterUserServer(s, userRouter)
-	web.RegisterWebServer(s, webRouter)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
