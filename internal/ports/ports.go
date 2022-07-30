@@ -37,7 +37,6 @@ func (p *Ports) FreePort(port string) {
 	if err != nil {
 		return
 	}
-	port1.Used = false
 	p.log.Infof("free port %d", port1.Port)
-	p.client.DB.Save(&port1)
+	p.client.DB.Model(&Port{}).Where("port = ?", port).Update("used", false)
 }

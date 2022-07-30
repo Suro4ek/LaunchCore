@@ -38,10 +38,10 @@ func (s *Service) CreateServer(ver int32, name string, saveworld bool, open bool
 		return "", err
 	}
 	s.client.DB.Create(&Server{
-		Port:        String(int32(port)),
+		Port:        String(port),
 		OwnerName:   name,
 		ContainerID: id,
-		Status:      "starting",
+		Status:      "running",
 		Open:        open,
 	})
 	return "ok", nil
@@ -98,7 +98,7 @@ func (s *Service) ListVersions() (version []version.Version, err error) {
 	return version, nil
 }
 
-func String(n int32) string {
+func String(n uint32) string {
 	buf := [11]byte{}
 	pos := len(buf)
 	i := int64(n)

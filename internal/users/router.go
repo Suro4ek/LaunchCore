@@ -2,10 +2,12 @@ package users
 
 import (
 	"LaunchCore/eu.suro/launch/protos/user"
+	"LaunchCore/internal/minecraft"
 	"LaunchCore/internal/plugins"
 	"LaunchCore/pkg/mysql"
 	"context"
 	"os"
+	"strconv"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -14,11 +16,13 @@ import (
 type routerUser struct {
 	client *mysql.Client
 	user.UnimplementedUserServer
+	service *minecraft.Service
 }
 
-func NewRouterUser(client *mysql.Client) user.UserServer {
+func NewRouterUser(client *mysql.Client, service *minecraft.Service) user.UserServer {
 	return &routerUser{
-		client: client,
+		client:  client,
+		service: service,
 	}
 }
 
@@ -133,5 +137,27 @@ func (r *routerUser) DeleteWorld(ctx context.Context, req *user.RemoveWorldReque
 	}
 	return &user.Response{
 		Status: "ok",
+	}, nil
+}
+
+func (r *routerUser) StopServer(ctx context.Context, req *user.StopServerRequest) (res *user.Response, err error) {
+	if req.Username == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "username is empty")
+	}
+	var server minecraft.Server
+	err = r.client.DB.Model(&minecraft.Server{}).Where("owner_name = ?", req.Username).First(&server).Error
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "server not found")
+	}
+	value, err := strconv.ParseInt(server.Port, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	status, err := r.service.DeleteServer(int32(value))
+	if err != nil {
+		return nil, err
+	}
+	return &user.Response{
+		Status: status,
 	}, nil
 }

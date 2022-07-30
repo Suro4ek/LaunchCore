@@ -9,6 +9,11 @@ service User{
 //  rpc AddFriend(AddFriendRequest) returns (Response) {}
 //  rpc RemoveFriend(RemoveFriendRequest) returns (Response) {}
   rpc DeleteWorld(RemoveWorldRequest) returns (Response) {}
+  rpc StopServer(StopServerRequest) returns (Response) {}
+}
+
+message StopServerRequest {
+  string username = 1;
 }
 
 message RemoveWorldRequest {

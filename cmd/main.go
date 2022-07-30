@@ -35,8 +35,8 @@ func main() {
 	migrate(newClient)
 	newPorts := ports.NewPorts(newClient, &log)
 	service := minecraft.NewMCService(newPorts, newClient, *docker)
-	checkServers(&log, newClient, docker, newPorts, service)
 	deleteAllServerBeforeStart(newClient, *docker, newPorts)
+	checkServers(&log, newClient, docker, newPorts, service)
 	startGRPCServer(&log, docker, newClient, newPorts, cfg, service)
 }
 
@@ -52,7 +52,6 @@ func migrate(client *mysql.Client) {
 
 func checkServers(log *logging.Logger, client *mysql.Client, mc *minecraft.MC, ports *ports.Ports, service *minecraft.Service) {
 	var repeat = make([]uint32, 0)
-	//var repeatBool = bool(false)
 	ticker := time.NewTicker(1 * time.Minute)
 	quit := make(chan struct{})
 	go func() {
@@ -93,7 +92,7 @@ func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client
 	s := grpc.NewServer()
 
 	router := minecraft.NewRouterServer(*service)
-	userRouter := users.NewRouterUser(client)
+	userRouter := users.NewRouterUser(client, service)
 	log.Info("start grpc server")
 	server.RegisterServerServer(s, router)
 	user.RegisterUserServer(s, userRouter)

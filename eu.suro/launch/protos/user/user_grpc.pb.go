@@ -27,6 +27,7 @@ type UserClient interface {
 	//  rpc AddFriend(AddFriendRequest) returns (Response) {}
 	//  rpc RemoveFriend(RemoveFriendRequest) returns (Response) {}
 	DeleteWorld(ctx context.Context, in *RemoveWorldRequest, opts ...grpc.CallOption) (*Response, error)
+	StopServer(ctx context.Context, in *StopServerRequest, opts ...grpc.CallOption) (*Response, error)
 }
 
 type userClient struct {
@@ -64,6 +65,15 @@ func (c *userClient) DeleteWorld(ctx context.Context, in *RemoveWorldRequest, op
 	return out, nil
 }
 
+func (c *userClient) StopServer(ctx context.Context, in *StopServerRequest, opts ...grpc.CallOption) (*Response, error) {
+	out := new(Response)
+	err := c.cc.Invoke(ctx, "/user.User/StopServer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServer is the server API for User service.
 // All implementations must embed UnimplementedUserServer
 // for forward compatibility
@@ -73,6 +83,7 @@ type UserServer interface {
 	//  rpc AddFriend(AddFriendRequest) returns (Response) {}
 	//  rpc RemoveFriend(RemoveFriendRequest) returns (Response) {}
 	DeleteWorld(context.Context, *RemoveWorldRequest) (*Response, error)
+	StopServer(context.Context, *StopServerRequest) (*Response, error)
 	mustEmbedUnimplementedUserServer()
 }
 
@@ -88,6 +99,9 @@ func (UnimplementedUserServer) GetUser(context.Context, *GetUserRequest) (*GetUs
 }
 func (UnimplementedUserServer) DeleteWorld(context.Context, *RemoveWorldRequest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteWorld not implemented")
+}
+func (UnimplementedUserServer) StopServer(context.Context, *StopServerRequest) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopServer not implemented")
 }
 func (UnimplementedUserServer) mustEmbedUnimplementedUserServer() {}
 
@@ -156,6 +170,24 @@ func _User_DeleteWorld_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _User_StopServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopServerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServer).StopServer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/user.User/StopServer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServer).StopServer(ctx, req.(*StopServerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // User_ServiceDesc is the grpc.ServiceDesc for User service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -174,6 +206,10 @@ var User_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteWorld",
 			Handler:    _User_DeleteWorld_Handler,
+		},
+		{
+			MethodName: "StopServer",
+			Handler:    _User_StopServer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
