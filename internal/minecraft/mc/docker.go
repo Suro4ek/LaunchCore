@@ -114,7 +114,7 @@ func (d *docker) Create(name string, port int32, version string, java_version st
 		//int32 to string
 		var plugins_str []string
 		for _, plugin := range user.Plugins {
-			plugins_str = append(plugins_str, fmt.Sprintf("%d", plugin))
+			plugins_str = append(plugins_str, plugin.SpigotID)
 		}
 		env = append(env, "SPIGET_RESOURCES="+strings.Join(plugins_str, ","))
 		d.log.Info("plugins")
