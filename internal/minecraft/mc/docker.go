@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 
@@ -50,36 +51,25 @@ func (d *docker) Create(name string, port int32, version string, java_version st
 		return "", err
 	}
 	var mounts = make([]mount.Mount, 0)
+	os.Mkdir("/root/server/", os.ModePerm)
 	mounts = append(mounts, mount.Mount{
 		Type:   mount.TypeBind,
 		Source: "/root/server/",
 		Target: "/config/",
 	})
+	os.Mkdir("/root/plugins/", os.ModePerm)
 	mounts = append(mounts, mount.Mount{
 		Type:   mount.TypeBind,
 		Source: "/root/plugins/",
 		Target: "/plugins",
 	})
 	if save_world {
+		os.MkdirAll("/root/worlds/"+user.Name+"/world", os.ModePerm)
+		os.Chown("/root/worlds/"+user.Name+"/world", 1000, 1000)
 		mounts = append(mounts, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: "/data/minecraft/" + user.Name + "/world",
-			Target: "/data/world",
-		})
-		mounts = append(mounts, mount.Mount{
-			Type:   mount.TypeBind,
-			Source: "/data/minecraft/" + user.Name + "/world_nether",
-			Target: "/data/world_nether",
-		})
-		mounts = append(mounts, mount.Mount{
-			Type:   mount.TypeBind,
-			Source: "/data/minecraft/" + user.Name + "/world_the_end",
-			Target: "/data/world_the_end",
-		})
-		mounts = append(mounts, mount.Mount{
-			Type:   mount.TypeBind,
-			Source: "/data/minecraft/" + user.Name + "/ops.json",
-			Target: "/data/ops.json",
+			Source: "/root/worlds/" + user.Name + "/world/",
+			Target: "/data/world/",
 		})
 		d.log.Info("save world")
 	}
@@ -97,8 +87,8 @@ func (d *docker) Create(name string, port int32, version string, java_version st
 		"SPAWN_PROTECTION=0",
 		//AutoStop
 		"ENABLE_AUTOSTOP=TRUE",
-		"AUTOSTOP_TIMEOUT_INIT=100",
-		"AUTOSTOP_TIMEOUT_EST=100",
+		"AUTOSTOP_TIMEOUT_INIT=60",
+		"AUTOSTOP_TIMEOUT_EST=60",
 		"OPS=" + user.RealName,
 	}
 	//if !open {

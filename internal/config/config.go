@@ -23,8 +23,7 @@ type MySQL struct {
 }
 
 type Minecraft struct {
-	Memory string `yaml:"memory"`
-	Type   string `yaml:"type" default:"PAPER"`
+	Type string `yaml:"type" default:"PAPER"`
 }
 
 var instance *Config

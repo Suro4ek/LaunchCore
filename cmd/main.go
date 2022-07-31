@@ -65,9 +65,9 @@ func checkServers(log *logging.Logger, client *mysql.Client, mc *minecraft.MC, p
 					_, err = mcstatusgo.Status("0.0.0.0", uint16(value), 10*time.Second, 5*time.Second)
 					if err != nil {
 						if check(servermc.ID, repeat) {
+							repeat = delete(servermc.ID, repeat)
 							log.Infof("delete server %s by port uint16 %d int32 %d", servermc.OwnerName, uint16(value), int32(value))
 							service.DeleteServer(int32(value))
-							delete(servermc.ID, repeat)
 						} else {
 							repeat = append(repeat, servermc.ID)
 						}
@@ -105,8 +105,8 @@ func deleteAllServerBeforeStart(client *mysql.Client, mc minecraft.MC, ports *po
 	var servers []minecraft.Server
 	client.DB.Model(&minecraft.Server{}).Find(&servers)
 	for _, servermc := range servers {
-		client.DB.Delete(servermc)
 		ports.FreePort(servermc.Port)
+		client.DB.Delete(servermc)
 		mc.Delete(servermc.ContainerID)
 	}
 }
