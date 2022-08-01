@@ -131,7 +131,7 @@ func (r *routerUser) DeleteWorld(ctx context.Context, req *user.RemoveWorldReque
 	if req.Name == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "name is empty")
 	}
-	err = os.Remove("/data/minecraft/" + req.Name)
+	err = os.RemoveAll("./worlds/" + req.Name)
 	if err != nil {
 		return nil, err
 	}

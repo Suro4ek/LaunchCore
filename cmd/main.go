@@ -101,13 +101,18 @@ func startGRPCServer(log *logging.Logger, mc *minecraft.MC, client *mysql.Client
 	}
 }
 
-func deleteAllServerBeforeStart(client *mysql.Client, mc minecraft.MC, ports *ports.Ports) {
+func deleteAllServerBeforeStart(client *mysql.Client, mc minecraft.MC, ports1 *ports.Ports) {
 	var servers []minecraft.Server
 	client.DB.Model(&minecraft.Server{}).Find(&servers)
 	for _, servermc := range servers {
-		ports.FreePort(servermc.Port)
+		ports1.FreePort(servermc.Port)
 		client.DB.Delete(servermc)
 		mc.Delete(servermc.ContainerID)
+	}
+	var portss []ports.Port
+	client.DB.Model(&ports.Port{}).Find(&portss)
+	for _, port := range portss {
+		client.DB.Model(&ports.Port{}).Where("port = ?", port.Port).Update("used", false)
 	}
 }
 

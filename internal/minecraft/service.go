@@ -33,7 +33,7 @@ func (s *Service) CreateServer(ver int32, name string, saveworld bool, open bool
 		return "", errors.New("no free ports")
 	}
 	//port to string
-	id, err := s.mc.Create(name, int32(port), version.Name, version.JVVersion, saveworld, open)
+	id, err := s.mc.Create(name, int32(port), version, saveworld, open)
 	if err != nil {
 		return "", err
 	}
@@ -61,16 +61,16 @@ func (s *Service) DeleteServer(port int32) (status string, err error) {
 	if err != nil {
 		return "", err
 	}
-	err = s.mc.Delete(server1.ContainerID)
-	if err != nil {
-		return "", err
-	}
-	//value, err := strconv.ParseInt(server1.Port, 10, 32)
 	s.ports.FreePort(server1.Port)
 	err = s.client.DB.Delete(server1).Error
 	if err != nil {
 		return "", err
 	}
+	err = s.mc.Delete(server1.ContainerID)
+	if err != nil {
+		return "", err
+	}
+	//value, err := strconv.ParseInt(server1.Port, 10, 32)
 	return "ok", nil
 }
 

@@ -3,10 +3,11 @@ package mc
 import (
 	"LaunchCore/internal/minecraft"
 	"LaunchCore/internal/users"
+	"LaunchCore/internal/version"
 	"LaunchCore/pkg/logging"
 	"LaunchCore/pkg/mysql"
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"os"
 	"strconv"
@@ -17,6 +18,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"gorm.io/gorm"
 )
 
 type docker struct {
@@ -33,9 +35,8 @@ func NewDocker(client *client.Client, log *logging.Logger, db *mysql.Client) min
 	}
 }
 
-func (d *docker) Create(name string, port int32, version string, java_version string, save_world bool, open bool) (id string, err error) {
-	fmt.Println(name, port, version, java_version)
-	reader, err := d.client.ImagePull(context.TODO(), "itzg/minecraft-server:"+java_version, types.ImagePullOptions{})
+func (d *docker) Create(name string, port int32, version version.Version, save_world bool, open bool) (id string, err error) {
+	reader, err := d.client.ImagePull(context.TODO(), "itzg/minecraft-server:"+version.JVVersion, types.ImagePullOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -45,30 +46,38 @@ func (d *docker) Create(name string, port int32, version string, java_version st
 	}
 	defer reader.Close()
 	d.log.Info("pull image success")
+	err = d.DB.DB.Model(&minecraft.Server{}).Where("owner_name = ?", name).First(&minecraft.Server{}).Error
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", err
+		}
+	} else {
+		return "", errors.New("server already exists")
+	}
 	var user users.User
 	err = d.DB.DB.Model(&users.User{}).Where("name = ?", name).Find(&user).Error
 	if err != nil {
 		return "", err
 	}
+	path, _ := os.Getwd()
 	var mounts = make([]mount.Mount, 0)
-	os.Mkdir("/root/server/", os.ModePerm)
+	os.Mkdir(path+"/config/", os.ModePerm)
 	mounts = append(mounts, mount.Mount{
 		Type:   mount.TypeBind,
-		Source: "/root/server/",
+		Source: path + "/config/",
 		Target: "/config/",
 	})
-	os.Mkdir("/root/plugins/", os.ModePerm)
+	os.Mkdir(path+"/plugins/", os.ModePerm)
 	mounts = append(mounts, mount.Mount{
 		Type:   mount.TypeBind,
-		Source: "/root/plugins/",
+		Source: path + "/plugins/",
 		Target: "/plugins",
 	})
-	if save_world {
-		os.MkdirAll("/root/worlds/"+user.Name+"/world", os.ModePerm)
-		os.Chown("/root/worlds/"+user.Name+"/world", 1000, 1000)
+	if save_world && version.Url == "" {
+		os.MkdirAll(path+"/worlds/"+user.Name+"/world", os.ModePerm)
 		mounts = append(mounts, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: "/root/worlds/" + user.Name + "/world/",
+			Source: path + "/worlds/" + user.Name + "/world/",
 			Target: "/data/world/",
 		})
 		d.log.Info("save world")
@@ -80,9 +89,11 @@ func (d *docker) Create(name string, port int32, version string, java_version st
 		"USE_AIKAR_FLAGS=true",
 		"COPY_CONFIG_DEST=/data",
 		"TYPE=PAPER",
+		"UID=1001",
+		"GID=1001",
 		"SYNC_SKIP_NEWER_IN_DESTINATION=false",
 		"SERVER_NAME=" + name,
-		"VERSION=" + version,
+		"VERSION=" + version.Version,
 		"ONLINE_MODE=FALSE",
 		"SPAWN_PROTECTION=0",
 		//AutoStop
@@ -90,6 +101,9 @@ func (d *docker) Create(name string, port int32, version string, java_version st
 		"AUTOSTOP_TIMEOUT_INIT=60",
 		"AUTOSTOP_TIMEOUT_EST=60",
 		"OPS=" + user.RealName,
+	}
+	if version.Url != "" {
+		env = append(env, "WORLD="+version.Url)
 	}
 	//if !open {
 	//	env = append(env, "ENFORCE_WHITELIST=TRUE")
@@ -111,7 +125,7 @@ func (d *docker) Create(name string, port int32, version string, java_version st
 	}
 	resp, err := d.client.ContainerCreate(context.Background(), &container.Config{
 		Env:   env,
-		Image: "itzg/minecraft-server:" + java_version,
+		Image: "itzg/minecraft-server:" + version.JVVersion,
 	}, &container.HostConfig{
 		AutoRemove: true,
 		PortBindings: nat.PortMap{
